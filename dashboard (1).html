@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FoodTrack — Delivery Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#1B1512; --panel:#241C17; --panel2:#2C231D; --line:#3A2F27;
+    --cream:#F2E8DA; --muted:#B4A493; --turmeric:#E7A83C; --chili:#D2543F; --curry:#8AA05B;
+    --font-display:'Fraunces',serif; --font-body:'Inter',sans-serif;
+    padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px);
+    box-sizing:border-box;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--cream);font-family:var(--font-body);}
+  body{padding:32px 28px 60px;}
+  .wrap{max-width:1240px;margin:0 auto;}
+  header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:22px;}
+  h1{font-family:var(--font-display);font-weight:600;font-size:clamp(28px,4vw,40px);margin:0 0 6px;letter-spacing:.2px;}
+  .sub{color:var(--muted);font-size:14px;max-width:480px;line-height:1.5;}
+  .period{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--muted);}
+  .period b{color:var(--turmeric);font-weight:600;}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:26px;}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 16px 14px;position:relative;overflow:hidden;}
+  .kpi .val{font-family:var(--font-display);font-size:26px;font-weight:600;}
+  .kpi .lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+  .kpi.accent-t{border-top:3px solid var(--turmeric);}
+  .kpi.accent-c{border-top:3px solid var(--chili);}
+  .kpi.accent-g{border-top:3px solid var(--curry);}
+
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+  @media(max-width:900px){.grid,.grid3{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 18px 10px;}
+  .card h3{font-family:var(--font-display);font-weight:600;font-size:16px;margin:0 0 2px;}
+  .card p.note{color:var(--muted);font-size:12px;margin:0 0 12px;}
+  .chart-box{position:relative;height:240px;}
+  .chart-box.tall{height:290px;}
+
+  .toplist{list-style:none;margin:0;padding:0;}
+  .toplist li{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .toplist li:last-child{border-bottom:none;}
+  .toplist .bar{flex:1;margin:0 10px;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;}
+  .toplist .bar span{display:block;height:100%;background:var(--turmeric);border-radius:3px;}
+  .toplist .n{color:var(--muted);width:38px;text-align:right;font-variant-numeric:tabular-nums;}
+
+  footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Delivery operations, at a glance</h1>
+      <div class="sub">Five thousand orders across ten cities, six months of activity — where the revenue comes from, who delivers fastest, and where orders fall apart.</div>
+    </div>
+    <div class="period">Jan – Jun 2026 &nbsp;·&nbsp; <b>5,000</b> orders analyzed</div>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi accent-t"><div class="val">₹33.5L</div><div class="lbl">Total revenue</div></div>
+    <div class="kpi"><div class="val">₹670</div><div class="lbl">Avg order value</div></div>
+    <div class="kpi accent-c"><div class="val">10.6%</div><div class="lbl">Cancellation rate</div></div>
+    <div class="kpi accent-g"><div class="val">22.9%</div><div class="lbl">Delivered on/before est.</div></div>
+    <div class="kpi"><div class="val">40.3 min</div><div class="lbl">Avg delivery time</div></div>
+    <div class="kpi"><div class="val">2.98 / 5</div><div class="lbl">Avg customer rating</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Revenue &amp; orders by month</h3>
+      <p class="note">Order Value summed and counted per calendar month</p>
+      <div class="chart-box"><canvas id="trend"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Order outcome</h3>
+      <p class="note">Delivered vs cancelled, all 5,000 orders</p>
+      <div class="chart-box"><canvas id="status"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>Orders by city</h3>
+      <p class="note">Coimbatore and Chennai lead</p>
+      <div class="chart-box"><canvas id="city"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Cuisine mix</h3>
+      <p class="note">Share of total orders</p>
+      <div class="chart-box"><canvas id="cuisine"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Payment mode</h3>
+      <p class="note">Cash still edges out digital</p>
+      <div class="chart-box"><canvas id="payment"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>Delivery partner speed</h3>
+      <p class="note">Avg delivery time (min), by fleet</p>
+      <div class="chart-box"><canvas id="partner"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Orders by time of day</h3>
+      <p class="note">Late-night dominates the order book</p>
+      <div class="chart-box"><canvas id="peak"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Customer rating spread</h3>
+      <p class="note">Fairly even across 1–5 stars</p>
+      <div class="chart-box"><canvas id="rating"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Top 10 restaurants by order count</h3>
+      <p class="note">Haldiram's leads the pack</p>
+      <ul class="toplist" id="topRest"></ul>
+    </div>
+    <div class="card">
+      <h3>Orders by weekday</h3>
+      <p class="note">Wednesday is busiest, Tuesday quietest</p>
+      <div class="chart-box"><canvas id="weekday"></canvas></div>
+    </div>
+  </div>
+
+  <footer>Built from Project1.xlsx · ₹49.6L given back in discounts across the period</footer>
+</div>
+
+<script>
+const D = {
+  monthly_orders: {"2026-01":906,"2026-02":785,"2026-03":866,"2026-04":782,"2026-05":832,"2026-06":829},
+  monthly_revenue: {"2026-01":602526,"2026-02":532374,"2026-03":583419,"2026-04":514100,"2026-05":553753,"2026-06":565968},
+  status: {"Delivered":4470,"Cancelled":530},
+  city: {"Coimbatore":532,"Chennai":532,"Pune":517,"Delhi":513,"Mumbai":498,"Bangalore":490,"Kochi":484,"Kolkata":484,"Mysore":478,"Hyderabad":472},
+  cuisine: {"Desserts":518,"South Indian":517,"Beverages":516,"Chinese":515,"Fast Food":506,"North Indian":504,"Burger":490,"Seafood":489,"Biryani":475,"Pizza":470},
+  payment: {"Cash":1036,"Credit Card":1021,"Wallet":1015,"UPI":972,"Debit Card":956},
+  partner_time: {"Shadowfax":39.5,"Rapido Delivery":40.1,"Dunzo":40.1,"Zomato Fleet":40.3,"Porter":40.6,"Blinkit Express":40.9},
+  peak: {"Late Night":1844,"Dinner":1225,"Breakfast":970,"Lunch":961},
+  rating: {"1":1015,"2":1032,"3":986,"4":964,"5":1003},
+  top_rest: {"Haldiram's":368,"Burger King":358,"KFC":347,"Saravana Bhavan":346,"Meghana Foods":341,"Faasos":341,"Paradise Biryani":334,"Barbeque Nation":333,"Wow Momo":331,"McDonald's":330},
+  weekday: {"Monday":719,"Tuesday":669,"Wednesday":735,"Thursday":718,"Friday":719,"Saturday":712,"Sunday":728}
+};
+
+const cream='#F2E8DA', muted='#B4A493', turmeric='#E7A83C', chili='#D2543F', curry='#8AA05B', line='#3A2F27';
+Chart.defaults.color = muted;
+Chart.defaults.font.family = "Inter, sans-serif";
+Chart.defaults.borderColor = line;
+
+function grid(axis){ return { grid:{ color: line, display: axis==='y' }, ticks:{ color: muted, font:{size:11} } }; }
+
+new Chart(document.getElementById('trend'), {
+  type:'bar',
+  data:{ labels:Object.keys(D.monthly_orders).map(m=>m.slice(5)+'/'+m.slice(2,4)),
+    datasets:[
+      {type:'line', label:'Revenue (₹)', data:Object.values(D.monthly_revenue), borderColor:turmeric, backgroundColor:turmeric, yAxisID:'y1', tension:.35, pointRadius:3},
+      {type:'bar', label:'Orders', data:Object.values(D.monthly_orders), backgroundColor:'#8AA05B99', yAxisID:'y', borderRadius:4, barPercentage:.6}
+    ]},
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:cream,boxWidth:12,font:{size:11}}}},
+    scales:{ x:grid('x'), y:{...grid('y'), position:'left', title:{display:true,text:'orders',color:muted,font:{size:10}}},
+      y1:{position:'right', grid:{display:false}, ticks:{color:muted,font:{size:10}}, title:{display:true,text:'₹',color:muted,font:{size:10}}} } }
+});
+
+new Chart(document.getElementById('status'), {
+  type:'doughnut',
+  data:{ labels:Object.keys(D.status), datasets:[{ data:Object.values(D.status), backgroundColor:[curry,chili], borderColor:'#241C17', borderWidth:3 }]},
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+    plugins:{ legend:{position:'bottom', labels:{color:cream,boxWidth:12,font:{size:11}}} } }
+});
+
+new Chart(document.getElementById('city'), {
+  type:'bar',
+  data:{ labels:Object.keys(D.city), datasets:[{ data:Object.values(D.city), backgroundColor:turmeric, borderRadius:4 }]},
+  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:grid('x'), y:{grid:{display:false}, ticks:{color:cream,font:{size:11}}} } }
+});
+
+new Chart(document.getElementById('cuisine'), {
+  type:'polarArea',
+  data:{ labels:Object.keys(D.cuisine), datasets:[{ data:Object.values(D.cuisine),
+    backgroundColor:['#E7A83Cdd','#D2543Fdd','#8AA05Bdd','#C98A4Add','#9C6B4Add','#B0743Fdd','#7A8F52dd','#D08A50dd','#A85C42dd','#C4A05Add'] }]},
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}}, scales:{ r:{ grid:{color:line}, angleLines:{color:line}, ticks:{display:false} } } }
+});
+
+new Chart(document.getElementById('payment'), {
+  type:'doughnut',
+  data:{ labels:Object.keys(D.payment), datasets:[{ data:Object.values(D.payment),
+    backgroundColor:[turmeric,chili,curry,'#C98A4A','#9C6B4A'], borderColor:'#241C17', borderWidth:3 }]},
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'55%',
+    plugins:{ legend:{position:'bottom', labels:{color:cream,boxWidth:10,font:{size:10}}} } }
+});
+
+new Chart(document.getElementById('partner'), {
+  type:'bar',
+  data:{ labels:Object.keys(D.partner_time), datasets:[{ data:Object.values(D.partner_time), backgroundColor:curry, borderRadius:4 }]},
+  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{...grid('x'), title:{display:true,text:'minutes',color:muted,font:{size:10}}}, y:{grid:{display:false}, ticks:{color:cream,font:{size:11}}} } }
+});
+
+new Chart(document.getElementById('peak'), {
+  type:'bar',
+  data:{ labels:Object.keys(D.peak), datasets:[{ data:Object.values(D.peak), backgroundColor:[chili,turmeric,curry,'#C98A4A'], borderRadius:4 }]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{grid:{display:false}, ticks:{color:cream,font:{size:11}}}, y:grid('y') } }
+});
+
+new Chart(document.getElementById('rating'), {
+  type:'bar',
+  data:{ labels:['1★','2★','3★','4★','5★'], datasets:[{ data:Object.values(D.rating), backgroundColor:turmeric, borderRadius:4 }]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{grid:{display:false}, ticks:{color:cream,font:{size:11}}}, y:grid('y') } }
+});
+
+new Chart(document.getElementById('weekday'), {
+  type:'line',
+  data:{ labels:Object.keys(D.weekday), datasets:[{ data:Object.values(D.weekday), borderColor:turmeric, backgroundColor:'#E7A83C33', fill:true, tension:.4, pointRadius:3, pointBackgroundColor:turmeric }]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{ x:{grid:{display:false}, ticks:{color:cream,font:{size:11}}}, y:grid('y') } }
+});
+
+const maxRest = Math.max(...Object.values(D.top_rest));
+document.getElementById('topRest').innerHTML = Object.entries(D.top_rest).map(([name,n])=>
+  `<li><span>${name}</span><span class="bar"><span style="width:${(n/maxRest*100).toFixed(0)}%"></span></span><span class="n">${n}</span></li>`
+).join('');
+</script>
+</body>
+</html>
